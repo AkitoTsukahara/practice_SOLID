@@ -1,0 +1,2 @@
+# practice_SOLID
+SOLID原則を学習していくためのリポジトリ
