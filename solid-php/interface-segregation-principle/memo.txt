@@ -1,0 +1,52 @@
+こちらの記事の「Liskov Substitution Principle（LSP）」に関する部分を、ポイントを絞ってストレートにまとめました👇
+https://accesto.com/blog/solid-php-solid-principles-in-php/#liskov-substitution-principle
+---
+## 🧠 LSPとは？
+
+派生クラスは基底クラスとして「置き換え可能」であるべき、という原則。
+すなわち、\*\*「基底クラスを期待しているコードが、派生クラスを渡されても壊れず正しく動作する」\*\*必要があります。([accesto.com][1])
+
+---
+
+## 記事で紹介された3つの典型ケース
+
+1. **RectangleとSquareの継承問題**
+
+   * `Square extends Rectangle`とすると、`setWidth()`や`setHeight()`の振る舞いが上書きされて、基底クラスを期待するテスト（例：矩形の面積計算）で結果が破綻。
+     → 結論：SquareはRectangleを継承すべきではなく、両者は共通インターフェースからそれぞれ実装すべき&#x20;
+
+2. **LiveDuckとToyDuckの誤った共通インターフェース**
+
+   * `ToyDuck`は`TheDuck`インターフェースに従うが、`swim()`前に`turnOn()`が必要。
+     → 呼び出し側が`instanceof`で分岐しないと動かず、派生型依存を生む＝LSP違反 ([accesto.com][1], [Stack Overflow][2])
+
+3. **FileとReadOnlyFileの継承問題**
+
+   * `ReadOnlyFile extends File`とすると、`write()`は例外を投げるようになり、`File`期待される動きを壊す＝LSP違反&#x20;
+
+---
+
+## ✅ まとめ：LSPを守るために
+
+* **共通インターフェースを定義し、継承ではなく実装で対応する**
+  → 機能ごとに（例：Readable, Writable, Swimmableなど）細かく型を分ける
+
+* **派生クラスが基底クラスの契約を壊していないか常にチェックを**
+  → 特に振る舞い（前提・後処理）や例外通知にズレがないか注意
+
+* **基底クラスを通じた設計において、派生型が特別扱いされる必要がないように**
+  → 呼び出し側に型チェックや条件分岐の余地を残さない設計を心がける
+
+---
+
+### 🔧 開発者視点で言うと：
+
+* \*\*「is-a」ではなく「behaves-as-a」\*\*で継承を判断する
+* **インターフェースを分割し、必要な機能単位で依存する**
+* 派生クラス追加時には、**既存コードの自動テストがすべて通るか必ず確認**
+
+記事中の3例は、すべて「継承による誤ったモデル化」が根本原因。
+逆に言えば、**継承→インターフェース→実装**という流れを徹底すれば、LSP違反は激減します。
+
+[1]: https://accesto.com/blog/solid-php-solid-principles-in-php/?utm_source=chatgpt.com "Solid PHP - SOLID principles in PHP | Accesto Blog"
+[2]: https://stackoverflow.com/questions/20861107/can-anyone-provide-an-example-of-the-liskov-substitution-principle-lsp-using-v?utm_source=chatgpt.com "Can anyone provide an example of the Liskov Substitution Principle ..."

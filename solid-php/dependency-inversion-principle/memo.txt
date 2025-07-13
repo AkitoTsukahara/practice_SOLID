@@ -1,6 +1,108 @@
-# 依存性の逆転
-この原則は、インターフェースを導入することで、上位モジュールが下位モジュールに依存しないようにすることを目的としています。これにより、コードの柔軟性と再利用性が向上します。
+# 依存性逆転原則（DIP）と実装パターン整理メモ
 
-## リアファクタリングの方針
-LoggerInterfaceを導入し、Loggerクラスをこのインターフェースに従うように変更します。
-これにより、Loggerの実装を変更しても、上位モジュールであるUserServiceは影響を受けません。
+## 1. レイヤーをまず意識する
+
+### 設計原則レイヤー
+
+* **DIP (Dependency Inversion Principle)**
+
+  * 依存の向きを「高水準 → 抽象 → 低水準」に反転させる設計ルール。
+
+### 実装パターンレイヤー
+
+| パターン                          | キーワード  | 役割                                                            |
+| ----------------------------- | ------ | ------------------------------------------------------------- |
+| **DI (Dependency Injection)** | *注入*   | 抽象を満たす実装を外から渡す。コンストラクタ／セッター／DI コンテナなど。                        |
+| **Factory**                   | *生成*   | どの実装を **new** するかという生成責務を切り出す。抽象を返すようにすれば DIP を保ったまま実装選択ができる。 |
+| **Template Method**           | *継承差分* | 高水準ロジックをスーパークラスへ置き、低水準の可変部分をサブクラスで実装。                         |
+
+> **ポイント** : DIP = “設計ルール”、DI/Factory/Template = “そのルールを守りやすくする道具”。
+
+---
+
+## 2. ミニマル図で見る依存関係
+
+```mermaid
+classDiagram
+    class MailerService{
+        +sendEmail()
+        -logger : Logger
+    }
+    class Logger{
+        <<interface>>
+        +logError()
+    }
+    class DatabaseLogger
+    MailerService --> Logger : depends on
+    Logger <|-- DatabaseLogger
+```
+
+* **MailerService** はインターフェース `Logger` だけを知る ⇒ **DIP 達成**。
+* 具体実装の注入方法で手段が分かれる：
+
+  1. **DI** : `__construct(Logger $logger)`
+  2. **Factory** : `__construct(LoggerFactory $factory)`
+  3. **Template Method** : `MailerBase::doSend()` を下位実装に任せる。
+
+---
+
+## 3. 実装パターン比較早見表
+
+| 機能        | DI                  | Factory           | Template Method    |
+| --------- | ------------------- | ----------------- | ------------------ |
+| 主目的       | 実装の**バインド**を外から差し込む | 実装の**生成**を外部へ委譲   | アルゴリズム骨格固定＋差分実装    |
+| 想定規模・場面   | 実装差替え／テストダブル        | 生成が条件分岐・複雑        | ステップ定義＋差分 override |
+| DIP との距離感 | 守りやすい最短ルート          | 生成を隠蔽しながら DIP を維持 | 高水準が抽象なら DIP 成立    |
+
+---
+
+## 4. よくある誤解 & リカバリ
+
+| 誤解                     | 何が問題？                    | リカバリ策                      |
+| ---------------------- | ------------------------ | -------------------------- |
+| "インターフェースを作ったら DIP 完了" | 抽象が下位ライブラリ主導だと依存が逆転していない | **抽象は高水準側**で宣言する           |
+| "DI コンテナを使えば自動で DIP"   | バインドで具体型を直結すると結合残存       | 登録は **抽象→具象** に徹する         |
+| "Factory は DI の別名"     | Factory だけでは注入が起きない      | Factory **自体を抽象化して DI** する |
+
+---
+
+## 5. 実務チェックリスト
+
+1. **抽象を上位モジュールが保有しているか？**
+2. **高水準コードに `new Concrete…` が残っていないか？**
+3. **テストで実装差替えがワンライナーか？**
+4. **生成が複雑なら Factory／Builder を検討する**
+5. **DI コンテナ設定は抽象→具象バインディングのみにする**
+
+---
+
+## 6. Before / After リファクタリング例
+
+### Before (DIP 違反)
+
+```php
+class UserService {
+    private DatabaseLogger $logger; // 具体クラス依存
+
+    public function __construct() {
+        $this->logger = new DatabaseLogger();
+    }
+}
+```
+
+### After (DIP + DI)
+
+```php
+class UserService {
+    public function __construct(private readonly Logger $logger) {}
+}
+
+// Laravel 例
+app()->bind(Logger::class, DatabaseLogger::class);
+```
+
+---
+
+### まとめ一行
+
+> **DIP は依存方向のルール。DI／Factory／Template はそのルールを現実装に落とし込むための“道具箱”。まず依存の向きを正してから、適材適所で道具を選ぶ。**
