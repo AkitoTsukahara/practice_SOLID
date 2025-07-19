@@ -3,16 +3,18 @@
 // An example of a code that does not conform to the Liskov substitution principle
 // Referring to https://accesto.com/blog/solid-php-solid-principles-in-php#LiskovSubstitutionPrinciple
 
-class Rectangle
+interface CalculableArea
+{
+    public function calculateArea(): int;
+}
+class Rectangle implements CalculableArea
 {
     protected int $width;
     protected int $height;
 
-    public function setWidth(int $width): void {
+    public function __construct(int $width = 0, int $height = 0)
+    {
         $this->width = $width;
-    }
-
-    public function setHeight(int $height): void {
         $this->height = $height;
     }
 
@@ -22,19 +24,20 @@ class Rectangle
     }
 }
 
-class Square extends Rectangle
+class Square implements CalculableArea
 {
-    public function setWidth(int $width): void
+    protected int $edge;
+
+    public function __construct(int $edge)
     {
-        $this->width = $width;
-        $this->height = $width;
+        $this->edge = $edge;
     }
 
-    public function setHeight(int $height): void
+    public function calculateArea(): int
     {
-        $this->width = $height;
-        $this->height = $height;
+        return $this->edge ** 2;
     }
+
 }
 
 class RectangleTest extends TestCase
